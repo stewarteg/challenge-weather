@@ -28,7 +28,7 @@ func (r *RealClient) ConsultCep(cep string) (*string, error) {
 		return nil, errors.New("invalid zipcode")
 	}
 
-	url := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep)
+	url := fmt.Sprintf("http://viacep.com.br/ws/%s/json/", cep)
 
 	// Criando um cliente HTTP
 	client := &http.Client{}

@@ -1,5 +1,5 @@
 # Etapa 1: Build
-FROM golang:1.20 AS builder
+FROM golang:1.23 AS builder
 
 # Definir o diretório de trabalho dentro do contêiner
 WORKDIR /app
@@ -7,23 +7,13 @@ WORKDIR /app
 # Copiar os arquivos do projeto para o contêiner
 COPY go.mod go.sum ./
 RUN go mod download
-
 COPY . .
 
-# Compilar o binário da aplicação
-RUN go build -o main .
+# Compilar o binário de forma estática
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o cloudrun
 
-# Etapa 2: Runtime
-FROM debian:bullseye-slim
-
-# Definir o diretório de trabalho dentro do contêiner
+FROM scratch
 WORKDIR /app
+COPY --from=build /app/cloudrun .
+ENTRYPOINT ["./cloudrun"]
 
-# Copiar o binário da etapa de build para a etapa de runtime
-COPY --from=builder /app/main .
-
-# Expor a porta que a aplicação utiliza
-EXPOSE 8080
-
-# Comando para executar a aplicação
-CMD ["./main"]

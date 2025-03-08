@@ -9,10 +9,17 @@ import (
 	"net/http"
 	"regexp"
 
-	dto "github.com/stewarteg/goexpert/challenge-weather/dto"
+	dto "github.com/stewarteg/challenge-weather/dto"
 )
 
-func ConsultCep(cep string) (*string, error) {
+type Client interface {
+	ConsultCep(cep string) (*string, error)
+	ConsultTemperatura(localidade string) (*float64, *float64, error)
+}
+
+type RealClient struct{}
+
+func (r *RealClient) ConsultCep(cep string) (*string, error) {
 
 	var validCep = regexp.MustCompile(`^\d{8}$`)
 
@@ -60,7 +67,7 @@ func ConsultCep(cep string) (*string, error) {
 	return &endereco.Localidade, nil
 }
 
-func ConsultTemperatura(localidade string) (*float64, *float64, error) {
+func (r *RealClient) ConsultTemperatura(localidade string) (*float64, *float64, error) {
 
 	fmt.Println("localidade:", localidade)
 	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=8bc0b8761d4a475fb59193932250803&q=%s&aqi=no", localidade)

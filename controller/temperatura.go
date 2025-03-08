@@ -4,21 +4,25 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/stewarteg/goexpert/challenge-weather/clients"
+	"github.com/stewarteg/challenge-weather/clients"
 )
 
-func ConsultaTemperatura(w http.ResponseWriter, r *http.Request) {
+type Controller struct {
+	Client clients.Client
+}
+
+func (c *Controller) ConsultaTemperatura(w http.ResponseWriter, r *http.Request) {
 
 	cep := r.URL.Query().Get("cep")
 
-	localidade, err := clients.ConsultCep(cep)
+	localidade, err := c.Client.ConsultCep(cep)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	celcius, fahrenhait, _ := clients.ConsultTemperatura(*localidade)
+	celcius, fahrenhait, _ := c.Client.ConsultTemperatura(*localidade)
 
 	tempResponse := map[string]float64{
 		"temp_C": *celcius,

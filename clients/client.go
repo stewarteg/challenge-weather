@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 
 	dto "github.com/stewarteg/challenge-weather/dto"
@@ -69,8 +70,11 @@ func (r *RealClient) ConsultCep(cep string) (*string, error) {
 
 func (r *RealClient) ConsultTemperatura(localidade string) (*float64, *float64, error) {
 
-	fmt.Println("localidade:", localidade)
-	url := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=8bc0b8761d4a475fb59193932250803&q=%s&aqi=no", localidade)
+	// Codificar a localidade para uso seguro na URL
+	encodedLocalidade := url.QueryEscape(localidade)
+
+	fmt.Println("localidade:", encodedLocalidade)
+	url := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=8bc0b8761d4a475fb59193932250803&q=%s&aqi=no", encodedLocalidade)
 
 	// Criando um cliente HTTP
 	client := &http.Client{}

@@ -1,8 +1,13 @@
 # challengeWeather
 
-Para rodar local com docker:
 
+LINK CLOUDRUN: https://challenge-weather-121739621502.us-central1.run.app/cep?cep=99999999
+
+
+DOCKER: 
+Para rodar local com docker:
 docker build --no-cache -t challenge-weather .
+
 docker-compose up --force-recreate
 
 link para realizar chamada após rodar app:

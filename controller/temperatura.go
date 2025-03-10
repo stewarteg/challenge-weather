@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/stewarteg/challenge-weather/clients"
@@ -15,8 +16,12 @@ type Controller struct {
 
 func (c *Controller) ConsultaTemperatura(w http.ResponseWriter, r *http.Request) {
 	// Iniciar o span para o método ConsultaTemperatura
+
+	log.Println("Iniciando ConsultaTemperatura - Criando Span")
+	defer log.Println("Finalizando ConsultaTemperatura - Span fechado")
+
 	tracer := otel.Tracer("controller")
-	ctx, span := tracer.Start(r.Context(), "ConsultaTemperatura")
+	ctx, span := tracer.Start(r.Context(), "ConsultaController")
 	defer span.End()
 
 	// Obter o CEP da query string

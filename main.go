@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/stewarteg/challenge-weather/clients"
+	"github.com/stewarteg/challenge-weather/config"
 	"github.com/stewarteg/challenge-weather/controller"
 )
 
@@ -23,4 +24,5 @@ func main() {
 	if err != nil {
 		fmt.Println("Error starting server:", err)
 	}
+	config.InitTracer()
 }

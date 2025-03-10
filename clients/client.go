@@ -1,115 +1,125 @@
 package clients
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
 
 	dto "github.com/stewarteg/challenge-weather/dto"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type Client interface {
-	ConsultCep(cep string) (*string, error, int)
-	ConsultTemperatura(localidade string) (*float64, *float64, error)
+	ConsultCep(ctx context.Context, cep string) (*string, error, int)
+	ConsultTemperatura(ctx context.Context, localidade string) (*float64, *float64, error)
 }
 
 type RealClient struct{}
 
-func (r *RealClient) ConsultCep(cep string) (*string, error, int) {
+func (r *RealClient) ConsultCep(ctx context.Context, cep string) (*string, error, int) {
+	tracer := otel.Tracer("client")
+	ctx, span := tracer.Start(ctx, "ConsultCep")
+	defer span.End()
 
+	// Validação do CEP
 	var validCep = regexp.MustCompile(`^\d{8}$`)
-
-	// Verifica se o CEP está no formato correto
 	if !validCep.MatchString(cep) {
-		return nil, errors.New("invalid zipcode"), 422
+		span.SetAttributes(attribute.String("error", "invalid zipcode"))
+		return nil, errors.New("invalid zipcode"), http.StatusUnprocessableEntity
 	}
 
+	// Fazer a requisição HTTP
+	//url := fmt.Sprintf("http://viacep.com.br/ws/%s/json/", cep)
 	url := fmt.Sprintf("http://viacep.com.br/ws/%s/json/", cep)
-
-	// Criando um cliente HTTP
-	client := &http.Client{}
-
-	// Criando a requisição GET
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		fmt.Println("Erro ao criar a requisição:", err)
-		return nil, err, 422
+		span.RecordError(err)
+		return nil, err, http.StatusInternalServerError
 	}
 
-	// Enviando a requisição
+	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Erro ao fazer a requisição:", err)
-		return nil, err, 422
+		span.RecordError(err)
+		return nil, err, http.StatusInternalServerError
 	}
-	defer resp.Body.Close() // Certifique-se de fechar o corpo da resposta
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("can not find zipcode"), 404
+		span.SetAttributes(attribute.Int("http.status_code", resp.StatusCode))
+		return nil, errors.New("can not find zipcode"), http.StatusNotFound
 	}
-	// Lendo o corpo da resposta
+
+	// Processar a resposta
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Erro ao ler o corpo da resposta:", err)
-		return nil, err, 422
+		span.RecordError(err)
+		return nil, err, http.StatusInternalServerError
 	}
 
 	var endereco dto.Endereco
 	err = json.Unmarshal(body, &endereco)
 	if err != nil {
-		log.Fatalf("Erro ao decodificar JSON1: %v", err)
+		span.RecordError(err)
+		return nil, err, http.StatusInternalServerError
 	}
 
 	if endereco.Localidade == "" {
+		span.RecordError(errors.New("can not find zipcode"))
 		return nil, errors.New("can not find zipcode"), 404
 	}
 
-	return &endereco.Localidade, nil, 200
+	span.SetAttributes(attribute.String("response.localidade", endereco.Localidade))
+	return &endereco.Localidade, nil, http.StatusOK
 }
 
-func (r *RealClient) ConsultTemperatura(localidade string) (*float64, *float64, error) {
+func (r *RealClient) ConsultTemperatura(ctx context.Context, localidade string) (*float64, *float64, error) {
+	tracer := otel.Tracer("client")
+	ctx, span := tracer.Start(ctx, "ConsultTemperatura")
+	defer span.End()
 
-	// Codificar a localidade para uso seguro na URL
+	// Codificar a localidade para a URL
 	encodedLocalidade := url.QueryEscape(localidade)
-
-	fmt.Println("localidade:", encodedLocalidade)
 	url := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=8bc0b8761d4a475fb59193932250803&q=%s&aqi=no", encodedLocalidade)
 
-	// Criando um cliente HTTP
-	client := &http.Client{}
-
-	// Criando a requisição GET
-	req, err := http.NewRequest("GET", url, nil)
+	// Fazer a requisição HTTP
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		fmt.Println("Erro ao criar a requisição:", err)
+		span.RecordError(err)
 		return nil, nil, err
 	}
 
-	// Enviando a requisição
+	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Erro ao fazer a requisição:", err)
+		span.RecordError(err)
 		return nil, nil, err
 	}
-	defer resp.Body.Close() // Certifique-se de fechar o corpo da resposta
+	defer resp.Body.Close()
 
-	// Lendo o corpo da resposta
+	// Processar a resposta
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Erro ao ler o corpo da resposta:", err)
+		span.RecordError(err)
 		return nil, nil, err
 	}
 
 	var weatherapi dto.WeatherResponse
 	err = json.Unmarshal(body, &weatherapi)
 	if err != nil {
-		log.Fatalf("Erro ao decodificar JSON2: %v", err)
+		span.RecordError(err)
+		return nil, nil, err
 	}
 
+	span.SetAttributes(
+		attribute.Float64("response.temp_C", weatherapi.Current.TempC),
+		attribute.Float64("response.temp_F", weatherapi.Current.TempF),
+	)
 	return &weatherapi.Current.TempC, &weatherapi.Current.TempF, nil
 }

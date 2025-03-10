@@ -5,11 +5,13 @@ import (
 	"net/http"
 
 	"github.com/stewarteg/challenge-weather/clients"
+	"github.com/stewarteg/challenge-weather/config"
 	"github.com/stewarteg/challenge-weather/controller"
 )
 
 func main() {
 
+	config.InitTracer("challenge-weather")
 	// Crie uma instância do cliente real
 	client := &clients.RealClient{}
 
@@ -23,4 +25,5 @@ func main() {
 	if err != nil {
 		fmt.Println("Error starting server:", err)
 	}
+
 }

@@ -1,6 +1,7 @@
 package controller_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -12,12 +13,12 @@ import (
 
 type MockClient struct{}
 
-func (m *MockClient) ConsultCep(cep string) (*string, error, int) {
+func (m *MockClient) ConsultCep(ctx context.Context, cep string) (*string, error, int) {
 	oi := "oi"
 	return &oi, nil, 200
 }
 
-func (m *MockClient) ConsultTemperatura(localidade string) (*float64, *float64, error) {
+func (m *MockClient) ConsultTemperatura(ctx context.Context, localidade string) (*float64, *float64, error) {
 	celsius := 25.0
 	fahrenheit := 77.0
 	return &celsius, &fahrenheit, nil

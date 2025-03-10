@@ -15,10 +15,10 @@ func (c *Controller) ConsultaTemperatura(w http.ResponseWriter, r *http.Request)
 
 	cep := r.URL.Query().Get("cep")
 
-	localidade, err := c.Client.ConsultCep(cep)
+	localidade, err, statusCode := c.Client.ConsultCep(cep)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), statusCode)
 		return
 	}
 

@@ -14,19 +14,19 @@ import (
 )
 
 type Client interface {
-	ConsultCep(cep string) (*string, error)
+	ConsultCep(cep string) (*string, error, int)
 	ConsultTemperatura(localidade string) (*float64, *float64, error)
 }
 
 type RealClient struct{}
 
-func (r *RealClient) ConsultCep(cep string) (*string, error) {
+func (r *RealClient) ConsultCep(cep string) (*string, error, int) {
 
 	var validCep = regexp.MustCompile(`^\d{8}$`)
 
 	// Verifica se o CEP está no formato correto
 	if !validCep.MatchString(cep) {
-		return nil, errors.New("invalid zipcode")
+		return nil, errors.New("invalid zipcode"), 422
 	}
 
 	url := fmt.Sprintf("http://viacep.com.br/ws/%s/json/", cep)
@@ -38,25 +38,25 @@ func (r *RealClient) ConsultCep(cep string) (*string, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Println("Erro ao criar a requisição:", err)
-		return nil, err
+		return nil, err, 422
 	}
 
 	// Enviando a requisição
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Erro ao fazer a requisição:", err)
-		return nil, err
+		return nil, err, 422
 	}
 	defer resp.Body.Close() // Certifique-se de fechar o corpo da resposta
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("can not find zipcode")
+		return nil, errors.New("can not find zipcode"), 404
 	}
 	// Lendo o corpo da resposta
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Erro ao ler o corpo da resposta:", err)
-		return nil, err
+		return nil, err, 422
 	}
 
 	var endereco dto.Endereco
@@ -65,7 +65,11 @@ func (r *RealClient) ConsultCep(cep string) (*string, error) {
 		log.Fatalf("Erro ao decodificar JSON1: %v", err)
 	}
 
-	return &endereco.Localidade, nil
+	if endereco.Localidade == "" {
+		return nil, errors.New("can not find zipcode"), 404
+	}
+
+	return &endereco.Localidade, nil, 200
 }
 
 func (r *RealClient) ConsultTemperatura(localidade string) (*float64, *float64, error) {

@@ -12,9 +12,9 @@ import (
 
 type MockClient struct{}
 
-func (m *MockClient) ConsultCep(cep string) (*string, error) {
+func (m *MockClient) ConsultCep(cep string) (*string, error, int) {
 	oi := "oi"
-	return &oi, nil
+	return &oi, nil, 200
 }
 
 func (m *MockClient) ConsultTemperatura(localidade string) (*float64, *float64, error) {

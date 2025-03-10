@@ -1,5 +1,5 @@
 # Etapa 1: Build
-FROM golang:1.23 AS builder
+FROM golang:1.23 AS build
 
 # Definir o diretório de trabalho dentro do contêiner
 WORKDIR /app
